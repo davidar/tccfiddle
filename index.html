@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en" style="height: 100%;">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CheerpX Interactive C Editor</title>
+    <script src="https://cxrtnc.leaningtech.com/1.0.6/cx.js"></script>
+    <style>
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 20px;
+        background: black;
+        color: white;
+        font-family: monospace;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      #editor {
+        width: 100%;
+        height: 50vh;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        border: 1px solid #333;
+        padding: 10px;
+        font-family: monospace;
+        white-space: pre;
+        overflow: auto;
+        resize: vertical;
+      }
+      #console {
+        flex: 1;
+        background: #000;
+        border: 1px solid #333;
+        padding: 10px;
+        overflow: auto;
+      }
+      button {
+        padding: 10px 20px;
+        background: #0066cc;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0052a3;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="editor" spellcheck="false"></textarea>
+    <button onclick="runCode()">Run Code</button>
+    <pre id="console"></pre>
+
+    <script type="module">
+      let cx;
+      let idbDevice;
+      let webDevice;
+      let dataDevice;
+      let counter = 0;
+
+      // Initialize CheerpX and devices
+      async function initialize() {
+        idbDevice = await CheerpX.IDBDevice.create("dbName");
+        webDevice = await CheerpX.WebDevice.create(".");
+        dataDevice = await CheerpX.DataDevice.create();
+        
+        cx = await CheerpX.Linux.create({
+          mounts: [
+            { type: "dir", path: "/", dev: idbDevice },
+            { type: "dir", path: "/web", dev: webDevice },
+            { type: "dir", path: "/data", dev: dataDevice }
+          ],
+        });
+        cx.setConsole(document.getElementById("console"));
+
+        // Set initial code in textarea
+        document.getElementById("editor").value = defaultCode;
+      }
+
+      // Function to run the code
+      window.runCode = async function() {
+        const code = document.getElementById("editor").value;
+        counter++;
+
+        try {
+          await dataDevice.writeFile(`/${counter}.c`, code);
+          const args = ["-nostdlib", "-nostdinc", "-run", `/data/${counter}.c`];
+          document.getElementById("console").textContent = `$ tcc ${args.join(' ')}\n`;
+          await cx.run("/web/tcc", args);
+        } catch (error) {
+          document.getElementById("console").textContent += "\nError: " + JSON.stringify(error);
+        }
+      };
+
+      // Default code to show in the editor
+      const defaultCode = `int main() {
+    puts("Hello, World!");
+    return 0;
+}
+
+///
+
+#define SYSCALL_INSNS "int $128"
+#define SYSCALL_INSNS_12 "xchg %ebx,%edx ; " SYSCALL_INSNS " ; xchg %ebx,%edx"
+#define SYSCALL_INSNS_34 "xchg %ebx,%edi ; " SYSCALL_INSNS " ; xchg %ebx,%edi"
+static inline long __syscall0(long n);
+asm(
+"__syscall0:\\n"
+"    movl   4(%esp),%eax\\n"
+     SYSCALL_INSNS "\\n"
+"    ret"
+);
+static inline long __syscall1(long n, long a1);
+asm(
+"__syscall1:\\n"
+"    movl   4(%esp),%eax\\n"
+"    movl   8(%esp),%edx\\n"
+     SYSCALL_INSNS_12 "\\n"
+"    ret"
+);
+static inline long __syscall2(long n, long a1, long a2);
+asm(
+"__syscall2:\\n"
+"    movl   4(%esp),%eax\\n"
+"    movl   8(%esp),%edx\\n"
+"    movl  12(%esp),%ecx\\n"
+     SYSCALL_INSNS_12 "\\n"
+"    ret"
+);
+static inline long __syscall3(long n, long a1, long a2, long a3);
+asm(
+"__syscall3:\\n"
+"    pushl %ebx\\n"
+"    movl   8(%esp),%eax\\n"
+"    movl  12(%esp),%ebx\\n"
+"    movl  16(%esp),%ecx\\n"
+"    movl  20(%esp),%edx\\n"
+     SYSCALL_INSNS "\\n"
+"    popl  %ebx\\n"
+"    ret"
+);
+static inline long __syscall4(long n, long a1, long a2, long a3, long a4);
+asm(
+"__syscall4:\\n"
+"    pushl %esi\\n"
+"    pushl %ebx\\n"
+"    movl  12(%esp),%eax\\n"
+"    movl  16(%esp),%ebx\\n"
+"    movl  20(%esp),%ecx\\n"
+"    movl  24(%esp),%edx\\n"
+"    movl  28(%esp),%esi\\n"
+     SYSCALL_INSNS "\\n"
+"    popl  %ebx\\n"
+"    popl  %esi\\n"
+"    ret"
+);
+static inline long __syscall5(long n, long a1, long a2, long a3, long a4, long a5);
+asm(
+"__syscall5:\\n"
+"    pushl %edi\\n"
+"    pushl %esi\\n"
+"    pushl %ebx\\n"
+"    movl  16(%esp),%eax\\n"
+"    movl  20(%esp),%ebx\\n"
+"    movl  24(%esp),%ecx\\n"
+"    movl  28(%esp),%edx\\n"
+"    movl  32(%esp),%esi\\n"
+"    movl  36(%esp),%edi\\n"
+     SYSCALL_INSNS "\\n"
+"    popl  %ebx\\n"
+"    popl  %esi\\n"
+"    popl  %edi\\n"
+"    ret"
+);
+static inline long __syscall6(long n, long a1, long a2, long a3, long a4, long a5, long a6);
+asm(
+"__syscall6:\\n"
+"    pushl %ebp\\n"
+"    pushl %edi\\n"
+"    pushl %esi\\n"
+"    pushl %ebx\\n"
+"    movl  20(%esp),%eax\\n"
+"    movl  24(%esp),%ebx\\n"
+"    movl  28(%esp),%ecx\\n"
+"    movl  32(%esp),%edx\\n"
+"    movl  36(%esp),%esi\\n"
+"    movl  40(%esp),%edi\\n"
+"    movl  44(%esp),%ebp\\n"
+     SYSCALL_INSNS "\\n"
+"    popl  %ebx\\n"
+"    popl  %esi\\n"
+"    popl  %edi\\n"
+"    popl  %ebp\\n"
+"    ret"
+);
+
+#define SYS_write 4
+#define SYS_exit  1
+
+#define STDOUT_FD 1
+
+typedef unsigned long size_t;
+typedef long ssize_t;
+
+size_t strlen(const char *s) {
+    const char *p = s;
+    while (*p) p++;
+    return p - s;
+}
+
+ssize_t write(int fd, const void *buf, size_t count) {
+    return __syscall3(SYS_write, fd, (long)buf, count);
+}
+
+int puts(const char *s) {
+    size_t len = strlen(s);
+    ssize_t written = write(STDOUT_FD, s, len);
+    if (written < 0) return -1;
+    
+    /* Write newline */
+    char newline = '\\n';
+    written = write(STDOUT_FD, &newline, 1);
+    if (written < 0) return -1;
+    
+    return 0;
+}
+
+void exit(int status) {
+    __syscall1(SYS_exit, status);
+}
+
+void _start(void) {
+    exit(main());
+}
+`;
+
+      // Initialize on page load
+      initialize();
+    </script>
+  </body>
+</html>
